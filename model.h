@@ -1,6 +1,16 @@
 #include "vars.h"
 #include "formula.h"
 
+#ifdef DEBUG_MODEL
+#define printd_model(...){\
+    printf("<%s>", __func__);\
+    printf(__VA_ARGS__);\
+    printf("\n");\
+}
+#else
+#define printd_model(...)
+#endif
+
 typedef struct stance
 {
     int id;
@@ -19,8 +29,9 @@ typedef struct hopes
 
 typedef struct model
 {
-    vars_pointer vars_p;
+    vars_pointer *vars_p;
     stance *stances;
+    __time_t time;
 } model;
 
 stance init_stance(int id, formula *f);

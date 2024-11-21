@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -pthread
 LDFLAGS =
 
 # Главный файл
@@ -12,6 +12,15 @@ OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
 
 # Заголовочные файлы
 HEADERS = $(SOURCE:=.h)
+
+CONFIG_FILE = config.conf
+
+CONFIG_FLAGS = $(shell awk '{ \
+    if ($$2 == "y") print "-D"$$1; \
+    else if ($$2 != "n") print "-D"$$1"="$$2; \
+}' $(CONFIG_FILE))
+
+CFLAGS += $(CONFIG_FLAGS)
 
 BUILD_DIR = build
 

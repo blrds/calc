@@ -5,6 +5,7 @@
 #include "vars.h"
 
 int add_to_end(vars_pointer *head, char *name, double value) {
+
     if (!head || !name) {
         return -1; 
     }
@@ -18,19 +19,36 @@ int add_to_end(vars_pointer *head, char *name, double value) {
     new_var->value = value;
     new_var->next = NULL;
 
-    if (!head->first) {
-        
+    if (!head->first)
+    {
         head->first = new_var;
-        head->last = new_var;
-    } else {
-        
-        head->last->next = new_var;
-        head->last = new_var;
     }
-
-    return 0; 
+    else
+    {
+        vars *temp = head->first;
+        temp = head->first;
+            while (temp->next)
+                temp = temp->next;
+        if (0 != strcmp(temp->name, new_var->name))
+        {
+            temp->next = new_var;
+        }
+    }
+    printd_var(new_var);
+    return 0;
 }
 
+vars *last(vars_pointer *head)
+{
+    if (!head)
+    {
+        return NULL;
+    }
+    vars *a = head->first;
+    while (a->next)
+        a = a->next;
+    return a;
+}
 
 vars *find(vars_pointer *head, char *name) {
     if (!head || !name) {
@@ -66,10 +84,6 @@ int delete_by_name(vars_pointer *head, char *name) {
                 head->first = current->next; 
             }
 
-            if (current == head->last) {
-                head->last = prev; 
-            }
-
             free(current->name); 
             free(current);       
             return 0;            
@@ -92,14 +106,15 @@ int clear(vars_pointer *head) {
     while (current) {
         vars *next = current->next;
 
-        free(current->name); 
-        free(current);       
+        free(current->name);
+        free(current);
+        current->next=NULL;
 
         current = next;
     }
 
+    printd_vars_list(head->first);
     head->first = NULL;
-    head->last = NULL;
 
     return 0; 
 }

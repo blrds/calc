@@ -113,22 +113,79 @@ int clear_hopes(stance *s) {
     return 0; 
 }
 
+int is_number(const char *str) {
+    if (!str || *str == '\0') return 0; 
+
+    char *endptr;
+    strtod(str, &endptr);
+    return *endptr == '\0'; 
+}
+
 operation *create_operation(cJSON *json_op) {
     operation *op = (operation *)malloc(sizeof(operation));
-    op->a = strdup(cJSON_GetObjectItem(json_op, "operand1")->valuestring);
-    op->b = strdup(cJSON_GetObjectItem(json_op, "operand2")->valuestring);
-    char * a = cJSON_GetObjectItem(json_op, "result")?cJSON_GetObjectItem(json_op, "result")->valuestring:"";
-    op->result = strdup(a);
-    op->func = strdup(cJSON_GetObjectItem(json_op, "action")->valuestring);
-    
-    char *func = op->func;
-    if (strcmp(func, "equals") == 0 || strcmp(func, "greater_than") == 0 || strcmp(func, "less_than") == 0) {
+    if (!op) {
+        fprintf(stderr, "Memory allocation error for operation.\n");
+        return NULL;
+    }
+
+    op->a = NULL;
+    op->b = NULL;
+    op->result = NULL;
+    op->func = NULL;
+    op->is_bool = 0;
+    op->is_a_const = 0;
+    op->is_b_const = 0;
+    op->a_const = 0.0;
+    op->b_const = 0.0;
+    op->next = NULL;
+
+    char *operand1 = cJSON_GetObjectItem(json_op, "operand1")?cJSON_GetObjectItem(json_op, "operand1")->valuestring:strdup("");
+    char *operand2 = cJSON_GetObjectItem(json_op, "operand2")?cJSON_GetObjectItem(json_op, "operand2")->valuestring:strdup("");
+    char *result = cJSON_GetObjectItem(json_op, "result")?cJSON_GetObjectItem(json_op, "result")->valuestring:strdup("");
+    char *action = cJSON_GetObjectItem(json_op, "action")?cJSON_GetObjectItem(json_op, "action")->valuestring:strdup("");
+
+    if (is_number(operand1)) {
+        op->is_a_const = 1;
+        op->a_const = atof(operand1);
+    } else {
+        op->is_a_const = 0;
+        op->a = strdup(operand1);
+    }
+
+    if (operand2)
+        if (is_number(operand2))
+        {
+            op->is_b_const = 1;
+            op->b_const = atof(operand2);
+        }
+        else
+        {
+            if (strcmp(operand2, "")==0)
+                op->is_b_const = -1;
+            else
+            {
+                op->is_b_const = 0;
+                op->b = strdup(operand2);
+            }
+        }
+
+    op->result = strdup(result);
+
+    op->func = strdup(action);
+
+    if (strcmp(action, "equals") == 0 || 
+        strcmp(action, "greater_than") == 0 || 
+        strcmp(action, "less_than") == 0 || 
+        strcmp(action, "greater_equal") == 0 || 
+        strcmp(action, "less_equal") == 0 || 
+        strcmp(action, "logical_or") == 0 || 
+        strcmp(action, "logical_and") == 0 || 
+        strcmp(action, "logical_not") == 0) {
         op->is_bool = 1;
     } else {
         op->is_bool = 0;
     }
 
-    op->next = NULL;
     return op;
 }
 
@@ -153,14 +210,13 @@ formula *create_formula(cJSON *json_formulas) {
 }
 
 
-hopes *create_hopes(cJSON *json_transitions, stance *all_stances) {
+hopes *create_hopes(cJSON *json_transitions, stance *all_stances, vars_pointer * vars_p) {
     hopes *head = NULL;
     hopes *last = NULL;
     cJSON *json_transition = NULL;
     cJSON_ArrayForEach(json_transition, json_transitions) {
         hopes *h = (hopes *)malloc(sizeof(hopes));
-        const char *to_name = cJSON_GetObjectItem(json_transition, "to")->valuestring;
-        
+        char *to_name = cJSON_GetObjectItem(json_transition, "to")->valuestring;
         stance *target = all_stances;
         while (target && target->id!=atoi(to_name)) {
             target = target->next;
@@ -179,24 +235,35 @@ hopes *create_hopes(cJSON *json_transitions, stance *all_stances) {
             last->next = h;
         }
         last = h;
+        add_variables(vars_p, h->f);
     }
-
     return head;
 }
 
-void add_variables(vars_pointer *vars_p, cJSON *json_op) {
-    char *result =cJSON_GetObjectItem(json_op, "result")?cJSON_GetObjectItem(json_op, "result")->valuestring:"";
-    char *operand1 = cJSON_GetObjectItem(json_op, "operand1")->valuestring;
-    char *operand2 = cJSON_GetObjectItem(json_op, "operand2")->valuestring;
+void add_variables(vars_pointer *vars_p, formula * f) {
+    if (!vars_p)
+        vars_p = (vars_pointer *)malloc(sizeof(vars_pointer));
 
-    if (!find(vars_p, result)) {
-        add_to_end(vars_p, result, 0.0);
-    }
-    if (!find(vars_p, operand1)) {
-        add_to_end(vars_p, operand1, 0.0);
-    }
-    if (!find(vars_p, operand2)) {
-        add_to_end(vars_p, operand2, 0.0);
+    operation * item = f->first;
+    
+    while (item)
+    {
+        printd_operations(item);
+        if (!item->is_a_const)
+            if (!find(vars_p, item->a))
+            {
+                add_to_end(vars_p, item->a, 0.0);
+            }
+        if (item->is_b_const==0)
+            if (!find(vars_p, item->b))
+            {
+                add_to_end(vars_p, item->b, 0.0);
+            }
+        if (!find(vars_p, item->result))
+            {
+                add_to_end(vars_p, item->result, 0.0);
+            }
+        item=item->next;
     }
 }
 
@@ -224,13 +291,9 @@ model *parse_model(char *path) {
         return NULL;
     }
     model *m = (model *)malloc(sizeof(model));
-    m->vars_p.first = NULL;
-    m->vars_p.last = NULL;
+    m->vars_p->first = NULL;
     m->stances = NULL;
 
-    stance *all_stances = NULL;
-    stance *last_stance = NULL;
-    int i;
 
     cJSON *stances = cJSON_GetObjectItem(json, "stances");
     cJSON *json_stance = NULL;
@@ -241,29 +304,16 @@ model *parse_model(char *path) {
         cJSON *formulas = cJSON_GetObjectItem(json_stance, "formulas");
         s->f = create_formula(formulas);
         cJSON *json_op = NULL;
-        cJSON_ArrayForEach(json_op, formulas) {
-            add_variables(&m->vars_p, json_op);
-        }
+        add_variables(m->vars_p, s->f);
         s->h = NULL;
         s->next = NULL;
         add_stance(m, s);
     }
+
+    stance *last_stance = m->stances;
     cJSON_ArrayForEach(json_stance, stances) {
         cJSON *transitions = cJSON_GetObjectItem(json_stance, "transitions");
-        last_stance->h = create_hopes(transitions, all_stances);
-        cJSON *json_transition = NULL;
-        cJSON_ArrayForEach(json_transition, transitions) {
-            cJSON *conditions = cJSON_GetObjectItem(json_transition, "conditions");
-            cJSON *actions = cJSON_GetObjectItem(json_transition, "actions");
-            
-            cJSON *json_op = NULL;
-            cJSON_ArrayForEach(json_op, conditions) {
-                add_variables(&m->vars_p, json_op);
-            }
-            cJSON_ArrayForEach(json_op, actions) {
-                add_variables(&m->vars_p, json_op);
-            }
-        }
+        last_stance->h = create_hopes(transitions, m->stances, m->vars_p);
 
         last_stance = last_stance->next;
     }
@@ -280,11 +330,20 @@ void print_formula(formula *f) {
 
     operation *current_op = f->first;
     while (current_op) {
-        printf("        %s = %s(%s, %s)\n", 
+        printf("        %s = %s(",
             current_op->result, 
-            current_op->func, 
-            current_op->a, 
-            current_op->b);
+            current_op->func);
+        if (current_op->is_a_const)
+            printf("%d",current_op->a_const);
+        else
+            printf("%s", current_op->a);
+        
+        if (current_op->is_b_const)
+            printf(", %d", current_op->b_const);
+        else
+            if(0 != strlen(current_op->b))
+                printf(", %s", current_op->b);
+        printf(")\n");
         current_op = current_op->next;
     }
 }

@@ -1,132 +1,127 @@
 {
-    "stances": [
-      {
-        "name": "1",
-        "formulas": [
-          {
-            "result": "x",
-            "action": "add",
-            "operand1": "a",
-            "operand2": "b"
-          },
-          {
-            "result": "y",
-            "action": "multiply",
-            "operand1": "x",
-            "operand2": "c"
-          }
-        ],
-        "transitions": [
-          {
-            "to": "2",
-            "conditions": [
-              {
-                "action": "greater_than",
-                "operand1": "x",
-                "operand2": "0"
-              },
-              {
-                "action": "less_than",
-                "operand1": "y",
-                "operand2": "10"
-              }
-            ],
-            "actions": [
-              {
-                "result": "x",
-                "action": "add",
-                "operand1": "x",
-                "operand2": "1"
-              },
-              {
-                "result": "y",
-                "action": "multiply",
-                "operand1": "y",
-                "operand2": "2"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "name": "2",
-        "formulas": [
-          {
-            "result": "z",
-            "action": "multiply",
-            "operand1": "x",
-            "operand2": "y"
-          }
-        ],
-        "transitions": [
-          {
-            "to": "3",
-            "conditions": [
-              {
-                "action": "greater_than",
-                "operand1": "z",
-                "operand2": "100"
-              }
-            ],
-            "actions": [
-              {
-                "result": "z",
-                "action": "subtract",
-                "operand1": "z",
-                "operand2": "50"
-              }
-            ]
-          },
-          {
-            "to": "1",
-            "conditions": [
-              {
-                "action": "less_than",
-                "operand1": "z",
-                "operand2": "50"
-              }
-            ],
-            "actions": [
-              {
-                "result": "z",
-                "action": "add",
-                "operand1": "z",
-                "operand2": "10"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "name": "3",
-        "formulas": [
-          {
-            "result": "w",
-            "action": "divide",
-            "operand1": "z",
-            "operand2": "2"
-          }
-        ],
-        "transitions": [
-          {
-            "to": "1",
-            "conditions": [
-              {
-                "action": "equals",
-                "operand1": "w",
-                "operand2": "25"
-              }
-            ],
-            "actions": [
-              {
-                "result": "w",
-                "action": "multiply",
-                "operand1": "w",
-                "operand2": "4"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
+  "stances": [
+    {
+      "name": "0",
+      "formulas": [
+        {
+          "result": "x",
+          "action": "set",
+          "operand1": "0,0"
+        },
+        {
+          "result": "y",
+          "action": "set",
+          "operand1": "0,0"
+        },
+        {
+          "result": "time",
+          "action": "set",
+          "operand1": "0,0"
+        }
+      ],
+      "transitions": [
+        {
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "name": "1",
+      "formulas": [
+        {
+          "result": "time",
+          "action": "add",
+          "operand1": "time",
+          "operand2": "1,0"
+        },
+        {
+          "result": "x",
+          "action": "add",
+          "operand1": "x",
+          "operand2": "1,0"
+        }
+        
+      ],
+      "transitions": [
+        {
+          "to": "2",
+          "conditions":[
+            {
+              "result": "log_res1",
+              "action": "greater_equal",
+              "operand1": "x",
+              "operand2": "5,0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2",
+      "formulas": [
+        {
+          "result": "time",
+          "action": "add",
+          "operand1": "time",
+          "operand2": "1,0"
+        },
+        {
+          "result": "y",
+          "action": "add",
+          "operand1": "y",
+          "operand2": "1,0"
+        }
+        
+      ],
+      "transitions": [
+        {
+          "to": "3",
+          "conditions":[
+            {
+              "result": "log_res1",
+              "action": "mod",
+              "operand1": "time",
+              "operand2": "5,0"
+            },{
+              "result": "log_res2",
+              "action": "equals",
+              "operand1": "log_res1",
+              "operand2": "0,0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3",
+      "formulas": [
+        {
+          "result": "time",
+          "action": "add",
+          "operand1": "time",
+          "operand2": "1,0"
+        },
+        {
+          "result": "x",
+          "action": "subtract",
+          "operand1": "x",
+          "operand2": "1,0"
+        }
+        
+      ],
+      "transitions": [
+        {
+          "to": "1",
+          "conditions":[
+            {
+              "result": "log_res1",
+              "action": "less_equal",
+              "operand1": "x",
+              "operand2": "0,0"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
